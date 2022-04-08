@@ -11,33 +11,36 @@ import com.b.simple.design.model.customer.Product;
 
 public class CustomerBOImpl implements CustomerBO {
 
-	@Override
-	public Amount getCustomerProductsSum(List<Product> products)
-			throws DifferentCurrenciesException {
-		BigDecimal temp = BigDecimal.ZERO;
+    @Override
+    public Amount getCustomerProductsSum(List<Product> products)
+            throws DifferentCurrenciesException {
 
-		if (products.size() == 0)
-			return new AmountImpl(temp, Currency.EURO);
+        if (products.isEmpty()) {
+            return new AmountImpl(BigDecimal.ZERO, Currency.EURO);
+        }
 
-		// Throw Exception If Any of the product has a currency different from
-		// the first product
-		Currency firstProductCurrency = products.get(0).getAmount()
-				.getCurrency();
+        if (!doAllProductsHaveSameCurrency(products)) {
+            throw new DifferentCurrenciesException();
+        }
+        return CalculateSumOfProducts(products);
+    }
 
-		for (Product product : products) {
-			boolean currencySameAsFirstProduct = product.getAmount()
-					.getCurrency().equals(firstProductCurrency);
-			if (!currencySameAsFirstProduct) {
-				throw new DifferentCurrenciesException();
-			}
-		}
+    private Amount CalculateSumOfProducts(List<Product> products) {
+        BigDecimal productsSum = BigDecimal.ZERO;
+        for (Product product : products) {
+            productsSum = productsSum.add(product.getAmount().getValue());
 
-		// Calculate Sum of Products
-		for (Product product : products) {
-			temp = temp.add(product.getAmount().getValue());
-		}
-		
-		// Create new product
-		return new AmountImpl(temp, firstProductCurrency);
-	}
+        }
+        final Currency firstProductCurrency = products.get(0).getAmount()
+                .getCurrency();
+
+        // Create new product
+        return new AmountImpl(productsSum, firstProductCurrency);
+    }
+
+    private boolean doAllProductsHaveSameCurrency(List<Product> products) throws DifferentCurrenciesException {
+        return products.stream().map(product -> product.getAmount()
+                .getCurrency().equals(products.get(0).getAmount()
+                        .getCurrency())).noneMatch(currencySameAsFirstProduct -> (!currencySameAsFirstProduct));
+    }
 }
